@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="ms">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Kuiz: Keunikan Sabah & Sarawak</title>
+  <style>
+    :root{font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans",sans-serif}
+    body{margin:0;background:linear-gradient(180deg,#f8fafc,#e6f0ff);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+    .card{width:100%;max-width:720px;background:#fff;border-radius:12px;box-shadow:0 8px 30px rgba(30,60,120,0.08);padding:22px}
+    h1{margin:0 0 12px;font-size:22px}
+    .meta{color:#555;margin-bottom:18px}
+    .question{font-weight:600;margin:16px 0}
+    .choices{display:grid;gap:10px}
+    .choice{padding:10px 12px;border-radius:8px;border:1px solid #e6e9ef;cursor:pointer;user-select:none}
+    .choice:hover{background:#f1f6ff}
+    .choice.selected{background:#dff0ff;border-color:#8ec9ff}
+    .controls{display:flex;gap:8px;justify-content:space-between;align-items:center;margin-top:18px}
+    button{background:#0b63ff;color:#fff;border:0;padding:10px 14px;border-radius:8px;cursor:pointer}
+    button.secondary{background:#eef2ff;color:#0b63ff;border:1px solid #d6e3ff}
+    .result{padding:16px;border-radius:10px;margin-top:14px;background:#f8fdfa;border:1px solid #e1f5ec;color:#064e33;display:none}
+    .progress{height:8px;background:#eef2ff;border-radius:999px;overflow:hidden;margin-top:12px}
+    .progress > i{display:block;height:100%;background:#0b63ff;width:0%}
+    footer{font-size:13px;color:#666;margin-top:12px;text-align:right}
+    @media(max-width:520px){.card{padding:16px}}
+  </style>
+</head>
+<body>
+  <div class="card" role="region" aria-label="Kuiz Keunikan Sabah dan Sarawak">
+    <h1>Kuiz: Keunikan Sabah & Sarawak</h1>
+    <div class="meta">Uji pengetahuan — pilih jawapan yang betul. 5 soalan. Good luck!</div>
+
+    <div id="quiz-area">
+      <!-- Soalan akan di-render di sini -->
+    </div>
+
+    <div class="progress" aria-hidden="true"><i id="prog"></i></div>
+
+    <div class="controls">
+      <div>
+        <button id="prevBtn" class="secondary">Sebelum</button>
+        <button id="nextBtn">Seterusnya</button>
+      </div>
+      <div id="qcount">Soalan 0 / 0</div>
+    </div>
+
+    <div id="result" class="result" role="status"></div>
+    <footer>Reka bentuk: Kuiz Mudah — boleh sunting soalan di dalam kod</footer>
+  </div>
+
+  <script>
+    // ======= EDIT SINI: soalan mudah untuk Keunikan Sabah & Sarawak =======
+    const questions = [
+      {
+        q: "Gunung Kinabalu terletak di negeri mana?",
+        choices: ["Sabah", "Sarawak", "Kedah", "Pahang"],
+        answer: 0
+      },
+      {
+        q: "Mana satu makanan tradisional Sarawak yang terkenal?",
+        choices: ["Laksa Sarawak", "Nasi Kerabu", "Rendang Tok", "Char Kuey Teow"],
+        answer: 0
+      },
+      {
+        q: "Tarikan gua yang terkenal di Sarawak dikenali sebagai?",
+        choices: ["Gua Niah", "Gua Batu Caves", "Gua Mulu", "Gua Kelam"],
+        answer: 0
+      },
+      {
+        q: "Apakah rumah tradisional tinggi yang ditemui di Sabah & Sarawak?",
+        choices: ["Rumah Panjang", "Kampung Laut", "Bungalow", "Rumah Melayu"],
+        answer: 0
+      },
+      {
+        q: "Haiwan ikonik yang boleh ditemui di Sabah (Taman Kinabatangan) ialah:",
+        choices: ["Orangutan Papan", "Ikan Paus", "Orang Utan Borneo", "Penguin"],
+        answer: 2
+      }
+    ];
+    // ======= Tamat bahagian edit =======
+
+    // State
+    let idx = 0;
+    const answers = new Array(questions.length).fill(null);
+
+    // Elements
+    const quizArea = document.getElementById('quiz-area');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const qcount = document.getElementById('qcount');
+    const resultBox = document.getElementById('result');
+    const prog = document.getElementById('prog');
+
+    function renderQuestion(i){
+      const item = questions[i];
+      quizArea.innerHTML = '';
+      const qEl = document.createElement('div');
+      qEl.className = 'question';
+      qEl.textContent = item.q;
+      quizArea.appendChild(qEl);
+
+      const choicesWrap = document.createElement('div');
+      choicesWrap.className = 'choices';
+      item.choices.forEach((ch, ci) => {
+        const c = document.createElement('div');
+        c.className = 'choice';
+        c.tabIndex = 0;
+        c.dataset.index = ci;
+        c.textContent = ch;
+        if (answers[i] === ci) c.classList.add('selected');
+        c.addEventListener('click', () => selectChoice(i, ci));
+        c.addEventListener('keydown', (e) => { if(e.key === 'Enter') selectChoice(i,ci) });
+        choicesWrap.appendChild(c);
+      });
+      quizArea.appendChild(choicesWrap);
+
+      qcount.textContent = `Soalan ${i+1} / ${questions.length}`;
+      prevBtn.disabled = (i === 0);
+      nextBtn.textContent = (i === questions.length - 1) ? 'Hantar' : 'Seterusnya';
+      updateProgress();
+      resultBox.style.display = 'none';
+    }
+
+    function selectChoice(questionIndex, choiceIndex){
+      answers[questionIndex] = choiceIndex;
+      // update UI
+      const choiceEls = quizArea.querySelectorAll('.choice');
+      choiceEls.forEach(el => el.classList.toggle('selected', Number(el.dataset.index) === choiceIndex));
+    }
+
+    prevBtn.addEventListener('click', () => {
+      if(idx > 0){ idx--; renderQuestion(idx); }
+    });
+
+    nextBtn.addEventListener('click', () => {
+      if(idx < questions.length - 1){
+        idx++; renderQuestion(idx);
+      } else {
+        submitQuiz();
+      }
+    });
+
+    function updateProgress(){
+      const done = answers.filter(a => a !== null).length;
+      const pct = Math.round((done / questions.length) * 100);
+      prog.style.width = pct + '%';
+    }
+
+    function submitQuiz(){
+      // kira markah
+      let score = 0;
+      for(let i=0;i<questions.length;i++){
+        if(answers[i] === questions[i].answer) score++;
+      }
+      const pct = Math.round((score / questions.length) * 100);
+      let remark = '';
+      if(pct === 100) remark = 'Hebat! Semua betul 🎉';
+      else if(pct >= 60) remark = 'Bagus! Tapi boleh jadi lebih baik.';
+      else remark = 'Jangan putus asa — cuba lagi!';
+      resultBox.innerHTML = `<strong>Keputusan: ${score} / ${questions.length}</strong><br>${pct}% — ${remark}`;
+      resultBox.style.display = 'block';
+      // scroll to result (turun sedikit)
+      resultBox.scrollIntoView({behavior:'smooth', block:'center'});
+    }
+
+    // init
+    renderQuestion(0);
+
+    // keyboard: left/right
+    document.addEventListener('keydown', (e) => {
+      if(e.key === 'ArrowLeft') prevBtn.click();
+      if(e.key === 'ArrowRight') nextBtn.click();
+    });
+  </script>
+</body>
+</html>
